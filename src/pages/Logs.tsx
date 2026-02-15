@@ -15,7 +15,6 @@ type LogEntry = {
   note: string | null;
   product_name: string;
   product_code: string;
-  user_name: string;
 };
 
 const Logs = () => {
@@ -29,8 +28,7 @@ const Logs = () => {
       .from("stock_transactions")
       .select(`
         id, action, qty, created_at, note,
-        products!inner(name, product_code),
-        profiles:performed_by(name)
+        products!inner(name, product_code)
       `)
       .order("created_at", { ascending: false })
       .limit(200);
@@ -46,7 +44,6 @@ const Logs = () => {
         note: row.note,
         product_name: row.products?.name || "",
         product_code: row.products?.product_code || "",
-        user_name: row.profiles?.name || "Unknown",
       }));
       setLogs(mapped);
     }
@@ -99,19 +96,18 @@ const Logs = () => {
                 <TableHead>Product</TableHead>
                 <TableHead>Action</TableHead>
                 <TableHead className="text-right">Qty</TableHead>
-                <TableHead>By User</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">
+                  <TableCell colSpan={4} className="text-center py-10 text-muted-foreground">
                     Loading logs...
                   </TableCell>
                 </TableRow>
               ) : filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">
+                  <TableCell colSpan={4} className="text-center py-10 text-muted-foreground">
                     No transactions found.
                   </TableCell>
                 </TableRow>
@@ -133,7 +129,6 @@ const Logs = () => {
                     <TableCell className="text-right font-mono font-semibold">
                       {log.action === "IN" ? "+" : "-"}{log.qty}
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{log.user_name}</TableCell>
                   </TableRow>
                 ))
               )}
