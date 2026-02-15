@@ -1,12 +1,9 @@
-import { useAuth } from "@/hooks/useAuth";
 import { Link, useLocation } from "react-router-dom";
-import { Package, FileText, LogOut } from "lucide-react";
+import { Package, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const AppHeader = () => {
-  const { userName, userRole, signOut } = useAuth();
   const location = useLocation();
-
   const isActive = (path: string) => location.pathname === path;
 
   return (
@@ -33,19 +30,6 @@ export const AppHeader = () => {
               </Button>
             </Link>
           </nav>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-muted-foreground">
-            {userName}
-            {userRole && (
-              <span className="ml-2 rounded bg-secondary px-1.5 py-0.5 font-mono text-xs">
-                {userRole}
-              </span>
-            )}
-          </span>
-          <Button variant="ghost" size="sm" onClick={signOut}>
-            <LogOut className="h-4 w-4" />
-          </Button>
         </div>
       </div>
     </header>

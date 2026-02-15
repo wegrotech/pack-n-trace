@@ -1,12 +1,11 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
 import { AppHeader } from "@/components/AppHeader";
 import { AddProductDialog } from "@/components/AddProductDialog";
 import { ProductQRDialog } from "@/components/ProductQRDialog";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, QrCode, Pencil } from "lucide-react";
+import { Plus, QrCode } from "lucide-react";
 import { toast } from "sonner";
 
 type Product = {
@@ -19,7 +18,6 @@ type Product = {
 };
 
 const Dashboard = () => {
-  const { userRole } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
@@ -62,12 +60,10 @@ const Dashboard = () => {
             <h1 className="text-2xl font-bold">Products</h1>
             <p className="text-sm text-muted-foreground">{products.length} total products</p>
           </div>
-          {userRole === "ADMIN" && (
-            <Button onClick={() => setAddOpen(true)} className="gap-2">
-              <Plus className="h-4 w-4" />
-              Add Product
-            </Button>
-          )}
+          <Button onClick={() => setAddOpen(true)} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Add Product
+          </Button>
         </div>
 
         <div className="rounded-lg border bg-card">

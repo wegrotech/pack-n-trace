@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,7 +26,6 @@ type Transaction = {
 
 const ProductScan = () => {
   const { code } = useParams<{ code: string }>();
-  const { user, session } = useAuth();
   const [product, setProduct] = useState<Product | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [qty, setQty] = useState(1);
@@ -44,7 +42,6 @@ const ProductScan = () => {
       setProduct(null);
     } else {
       setProduct(data);
-      // Fetch recent transactions
       const { data: txns } = await supabase
         .from("stock_transactions")
         .select("*")
@@ -61,7 +58,7 @@ const ProductScan = () => {
   }, [code]);
 
   const handleStockAction = async (action: "IN" | "OUT") => {
-    if (!product || !user) return;
+    if (!product) return;
     if (qty <= 0) {
       toast.error("Quantity must be at least 1");
       return;
@@ -72,7 +69,7 @@ const ProductScan = () => {
       p_product_id: product.id,
       p_action: action,
       p_qty: qty,
-      p_user_id: user.id,
+      p_user_id: null,
       p_note: null,
     });
 
@@ -89,20 +86,6 @@ const ProductScan = () => {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <p className="animate-pulse font-mono text-muted-foreground">Loading product...</p>
-      </div>
-    );
-  }
-
-  if (!session) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-sm text-center">
-          <CardContent className="pt-6">
-            <Package className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-            <p className="text-lg font-semibold">Please sign in to manage stock</p>
-            <a href="/auth" className="mt-4 inline-block text-accent underline">Sign In</a>
-          </CardContent>
-        </Card>
       </div>
     );
   }
