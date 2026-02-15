@@ -1,12 +1,12 @@
-import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { toast } from "sonner";
-import { ArrowDown, ArrowUp, Package } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { ArrowDown, ArrowUp, Package } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
+import { toast } from "sonner";
 
 type Product = {
   id: string;
@@ -65,19 +65,21 @@ const ProductScan = () => {
     }
 
     setActionLoading(true);
-    const { error } = await supabase.rpc("perform_stock_transaction", {
-      p_product_id: product.id,
-      p_action: action,
-      p_qty: qty,
-      p_user_id: null,
-      p_note: null,
-    });
-
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success("Stock Updated Successfully");
-      fetchProduct();
+    try {
+      const resp = await fetch('/api/perform-stock', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ p_product_id: product.id, p_action: action, p_qty: qty, p_user_id: null, p_note: null }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) {
+        toast.error(data?.error?.message || JSON.stringify(data));
+      } else {
+        toast.success('Stock Updated Successfully');
+        fetchProduct();
+      }
+    } catch (err: any) {
+      toast.error(err?.message || String(err));
     }
     setActionLoading(false);
   };

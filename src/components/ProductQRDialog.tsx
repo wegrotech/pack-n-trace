@@ -1,7 +1,7 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { QRCodeSVG } from "qrcode.react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Copy } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
 
 type Props = {
@@ -13,7 +13,8 @@ type Props = {
 export const ProductQRDialog = ({ open, onOpenChange, product }: Props) => {
   if (!product) return null;
 
-  const url = `${window.location.origin}/p/${product.product_code}`;
+  const base = import.meta.env.VITE_PUBLIC_BASE_URL ?? window.location.origin;
+  const url = `${base}/p/${product.product_code}`;
 
   const copyLink = () => {
     navigator.clipboard.writeText(url);
