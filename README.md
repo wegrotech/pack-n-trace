@@ -1,73 +1,65 @@
-# Welcome to your Lovable project
+# Pack-n-Trace
 
-## Project info
+Inventory app with:
+- React/Vite frontend
+- Supabase database
+- Python-only Telegram bot integration
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Frontend
 
-## How can I edit this code?
-
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```bash
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## Python Telegram Bot
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Telegram integration is implemented only in `python/telegram_bot`.
 
-**Use GitHub Codespaces**
+### Run locally
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+```bash
+cd python/telegram_bot
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn app:app --host 0.0.0.0 --port 8000 --reload
+```
 
-## What technologies are used for this project?
+### Environment variables (Python service)
 
-This project is built with:
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `TELEGRAM_BOT_TOKEN`
+- `TELEGRAM_WEBHOOK_SECRET`
+- `SUPABASE_EVENT_SECRET`
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+### Supabase trigger callback migration
 
-## How can I deploy this project?
+Apply:
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+- `supabase/migrations/20260217_telegram_bot_setup.sql`
+- `supabase/migrations/20260218_telegram_event_triggers.sql`
 
-## Can I connect a custom domain to my Lovable project?
+Set DB settings used by trigger callbacks:
 
-Yes, you can!
+```sql
+alter database postgres set "app.settings.python_webhook_url" = 'https://<your-python-host>';
+alter database postgres set "app.settings.supabase_event_secret" = '<shared-secret>';
+```
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+### Telegram webhook
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Set webhook to Python endpoint:
+
+```bash
+curl -X POST "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook" \
+  -H "Content-Type: application/json" \
+  -d "{\"url\":\"https://<your-python-host>/telegram/webhook\",\"secret_token\":\"<TELEGRAM_WEBHOOK_SECRET>\"}"
+```
+
+## Removed TypeScript Telegram Endpoints
+
+These no longer exist:
+- `POST /api/telegram-webhook`
+- `POST /api/telegram-notify?action=*`
