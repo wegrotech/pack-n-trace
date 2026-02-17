@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ArrowDown, ArrowUp, Package } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -32,7 +32,7 @@ const ProductScan = () => {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
 
-  const fetchProduct = async () => {
+  const fetchProduct = useCallback(async () => {
     const { data, error } = await supabase
       .from("products")
       .select("*")
@@ -51,11 +51,11 @@ const ProductScan = () => {
       setTransactions(txns || []);
     }
     setLoading(false);
-  };
+  }, [code]);
 
   useEffect(() => {
     fetchProduct();
-  }, [code]);
+  }, [fetchProduct]);
 
   const handleStockAction = async (action: "IN" | "OUT") => {
     if (!product) return;
@@ -78,8 +78,9 @@ const ProductScan = () => {
         toast.success('Stock Updated Successfully');
         fetchProduct();
       }
-    } catch (err: any) {
-      toast.error(err?.message || String(err));
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      toast.error(message);
     }
     setActionLoading(false);
   };

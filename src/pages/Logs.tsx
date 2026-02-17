@@ -17,6 +17,18 @@ type LogEntry = {
   product_code: string;
 };
 
+type StockTransactionRow = {
+  id: string;
+  action: string;
+  qty: number;
+  created_at: string;
+  note: string | null;
+  products: {
+    name: string | null;
+    product_code: string | null;
+  } | null;
+};
+
 const Logs = () => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,7 +48,7 @@ const Logs = () => {
     if (error) {
       toast.error(error.message);
     } else {
-      const mapped = (data || []).map((row: any) => ({
+      const mapped = ((data || []) as StockTransactionRow[]).map((row) => ({
         id: row.id,
         action: row.action,
         qty: row.qty,

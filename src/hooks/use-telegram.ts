@@ -1,11 +1,12 @@
 import { supabase } from '@/integrations/supabase/client'
+import type { Enums } from '@/integrations/supabase/types'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 
 interface TelegramSubscription {
     id: string
     chat_id: number
-    notification_type: string
+    notification_type: Enums<'notification_type'>
     product_id: string | null
     is_active: boolean
     products?: {
@@ -76,7 +77,7 @@ export function useAddTelegramSubscription() {
     return useMutation({
         mutationFn: async (input: {
             chat_id: number
-            notification_type: string
+            notification_type: Enums<'notification_type'>
             product_id?: string | null
         }) => {
             const { data, error } = await supabase

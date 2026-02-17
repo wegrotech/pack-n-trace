@@ -103,6 +103,134 @@ export type Database = {
           },
         ]
       }
+      telegram_chats: {
+        Row: {
+          chat_id: number
+          chat_title: string | null
+          chat_type: string
+          created_at: string
+          first_name: string | null
+          id: number
+          is_active: boolean | null
+          last_name: string | null
+          updated_at: string
+          username: string | null
+        }
+        Insert: {
+          chat_id: number
+          chat_title?: string | null
+          chat_type: string
+          created_at?: string
+          first_name?: string | null
+          id?: number
+          is_active?: boolean | null
+          last_name?: string | null
+          updated_at?: string
+          username?: string | null
+        }
+        Update: {
+          chat_id?: number
+          chat_title?: string | null
+          chat_type?: string
+          created_at?: string
+          first_name?: string | null
+          id?: number
+          is_active?: boolean | null
+          last_name?: string | null
+          updated_at?: string
+          username?: string | null
+        }
+        Relationships: []
+      }
+      telegram_notifications_log: {
+        Row: {
+          chat_id: number
+          created_at: string
+          error_message: string | null
+          id: string
+          message_id: number | null
+          message_text: string
+          notification_type: Database["public"]["Enums"]["notification_type"]
+          product_id: string | null
+          status: string
+        }
+        Insert: {
+          chat_id: number
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_id?: number | null
+          message_text: string
+          notification_type: Database["public"]["Enums"]["notification_type"]
+          product_id?: string | null
+          status: string
+        }
+        Update: {
+          chat_id?: number
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_id?: number | null
+          message_text?: string
+          notification_type?: Database["public"]["Enums"]["notification_type"]
+          product_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_notifications_log_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      telegram_subscriptions: {
+        Row: {
+          chat_id: number
+          created_at: string
+          id: string
+          is_active: boolean | null
+          notification_type: Database["public"]["Enums"]["notification_type"]
+          product_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          chat_id: number
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          notification_type?: Database["public"]["Enums"]["notification_type"]
+          product_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          chat_id?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          notification_type?: Database["public"]["Enums"]["notification_type"]
+          product_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_subscriptions_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "telegram_chats"
+            referencedColumns: ["chat_id"]
+          },
+          {
+            foreignKeyName: "telegram_subscriptions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
@@ -160,6 +288,7 @@ export type Database = {
     }
     Enums: {
       app_role: "ADMIN" | "WH_MANAGER"
+      notification_type: "STOCK_IN" | "STOCK_OUT" | "NEW_PRODUCT" | "ALL"
       stock_action: "IN" | "OUT"
     }
     CompositeTypes: {
@@ -289,6 +418,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["ADMIN", "WH_MANAGER"],
+      notification_type: ["STOCK_IN", "STOCK_OUT", "NEW_PRODUCT", "ALL"],
       stock_action: ["IN", "OUT"],
     },
   },

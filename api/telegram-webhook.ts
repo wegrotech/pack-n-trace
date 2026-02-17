@@ -33,6 +33,12 @@ interface TelegramChat {
     username?: string
 }
 
+type SubscriptionWithProduct = {
+    product_id: string | null
+    notification_type: string
+    products?: { name?: string }[] | null
+}
+
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -75,10 +81,6 @@ async function sendTelegramMessage(chatId: number, text: string): Promise<boolea
 async function handleTelegramMessage(update: TelegramUpdate) {
     if (!update.message) return
     const supabase = getSupabaseClient()
-    if (!supabase) {
-        console.error('Missing Supabase server env vars')
-        return
-    }
 
     const { chat, text } = update.message
     const chatData: TelegramChat = {
@@ -90,11 +92,18 @@ async function handleTelegramMessage(update: TelegramUpdate) {
         username: chat.username,
     }
 
-    // Save or update chat info
-    await supabase
-        .from('telegram_chats')
-        .upsert([chatData], { onConflict: 'chat_id' })
-        .catch(err => console.error('Error saving chat:', err))
+    // Save chat info only when DB config is available.
+    if (supabase) {
+        const { error } = await supabase
+            .from('telegram_chats')
+            .upsert([chatData], { onConflict: 'chat_id' })
+
+        if (error) {
+            console.error('Error saving chat:', error)
+        }
+    } else {
+        console.error('Missing Supabase server env vars; chat persistence skipped')
+    }
 
     // Handle bot commands
     if (!text) return
@@ -288,9 +297,9 @@ async function handleListSubscriptions(chatId: number) {
         }
 
         let message = '<b>Your Subscriptions:</b>\n\n'
-        subscriptions.forEach((sub: any) => {
+        subscriptions.forEach((sub: SubscriptionWithProduct) => {
             if (sub.product_id) {
-                message += `• Product: ${sub.products?.name || sub.product_id}\n`
+                message += `• Product: ${sub.products?.[0]?.name || sub.product_id}\n`
             } else {
                 message += `• ${sub.notification_type.replace(/_/g, ' ')}\n`
             }
@@ -307,8 +316,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' })
     }
-    if (!TELEGRAM_BOT_TOKEN || !getSupabaseClient()) {
-        return res.status(500).json({ error: 'Missing Telegram or Supabase server configuration' })
+    if (!TELEGRAM_BOT_TOKEN) {
+        return res.status(500).json({ error: 'Missing TELEGRAM_BOT_TOKEN' })
     }
 
     try {

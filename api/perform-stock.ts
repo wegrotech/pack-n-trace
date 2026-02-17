@@ -1,6 +1,14 @@
 import { createClient } from '@supabase/supabase-js'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 
+interface UpdatedProductResult {
+    quantity_current: number
+}
+
+type SubscriptionRow = {
+    telegram_chats: { chat_id: number } | null
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
@@ -51,8 +59,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         return res.status(200).json(data)
-    } catch (err: any) {
-        return res.status(500).json({ error: err.message || String(err) })
+    } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err)
+        return res.status(500).json({ error: message })
     }
 }
 
@@ -64,7 +73,7 @@ async function notifyTelegramSubscribers(
     action: string,
     qty: number,
     note: string | null,
-    updatedProduct: any
+    updatedProduct: UpdatedProductResult
 ) {
     const supabase = createClient(supabaseUrl, serviceKey)
 
@@ -102,7 +111,7 @@ ${note ? `<b>Note:</b> ${note}` : ''}
 
     // Send to all subscribed chats
     const chatIds = subscriptions
-        .map((sub: any) => sub.telegram_chats?.chat_id)
+        .map((sub: SubscriptionRow) => sub.telegram_chats?.chat_id)
         .filter(Boolean)
 
     for (const chatId of chatIds) {
