@@ -34,16 +34,20 @@ interface TelegramChat {
 }
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-if (!TELEGRAM_BOT_TOKEN || !SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
-    throw new Error('Missing required environment variables')
+function getSupabaseClient() {
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) return null
+    return createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 }
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-
 async function sendTelegramMessage(chatId: number, text: string): Promise<boolean> {
+    if (!TELEGRAM_BOT_TOKEN) {
+        console.error('Missing TELEGRAM_BOT_TOKEN')
+        return false
+    }
+
     try {
         const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
             method: 'POST',
@@ -70,6 +74,11 @@ async function sendTelegramMessage(chatId: number, text: string): Promise<boolea
 
 async function handleTelegramMessage(update: TelegramUpdate) {
     if (!update.message) return
+    const supabase = getSupabaseClient()
+    if (!supabase) {
+        console.error('Missing Supabase server env vars')
+        return
+    }
 
     const { chat, text } = update.message
     const chatData: TelegramChat = {
@@ -155,6 +164,12 @@ async function handleHelp(chatId: number) {
 }
 
 async function handleSubscribe(chatId: number, args: string[]) {
+    const supabase = getSupabaseClient()
+    if (!supabase) {
+        await sendTelegramMessage(chatId, 'Server configuration error. Please contact admin.')
+        return
+    }
+
     if (args.length === 0) {
         await sendTelegramMessage(chatId, '❌ Please specify what to subscribe to. Type /help for options.')
         return
@@ -212,6 +227,12 @@ async function handleSubscribe(chatId: number, args: string[]) {
 }
 
 async function handleUnsubscribe(chatId: number, args: string[]) {
+    const supabase = getSupabaseClient()
+    if (!supabase) {
+        await sendTelegramMessage(chatId, 'Server configuration error. Please contact admin.')
+        return
+    }
+
     try {
         if (args.length === 0 || args[0].toLowerCase() === 'all') {
             // Unsubscribe from all
@@ -241,6 +262,12 @@ async function handleUnsubscribe(chatId: number, args: string[]) {
 }
 
 async function handleListSubscriptions(chatId: number) {
+    const supabase = getSupabaseClient()
+    if (!supabase) {
+        await sendTelegramMessage(chatId, 'Server configuration error. Please contact admin.')
+        return
+    }
+
     try {
         const { data: subscriptions } = await supabase
             .from('telegram_subscriptions')
@@ -279,6 +306,9 @@ async function handleListSubscriptions(chatId: number) {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' })
+    }
+    if (!TELEGRAM_BOT_TOKEN || !getSupabaseClient()) {
+        return res.status(500).json({ error: 'Missing Telegram or Supabase server configuration' })
     }
 
     try {

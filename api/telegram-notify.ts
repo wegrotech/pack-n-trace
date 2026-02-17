@@ -1,19 +1,23 @@
-import { notifyNewProduct, notifyStockMovement } from '@/integrations/telegram/notifier'
+import { notifyNewProduct, notifyStockMovement } from '../src/integrations/telegram/notifier'
 import { createClient } from '@supabase/supabase-js'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 const WEBHOOK_URL = process.env.TELEGRAM_WEBHOOK_URL || 'https://pack-n-trace.vercel.app/api/telegram-webhook'
 
-if (!TELEGRAM_BOT_TOKEN || !SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
-    throw new Error('Missing required environment variables')
+function getSupabaseClient() {
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) return null
+    return createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 }
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-
 async function setupWebhook(): Promise<boolean> {
+    if (!TELEGRAM_BOT_TOKEN) {
+        console.error('Missing TELEGRAM_BOT_TOKEN')
+        return false
+    }
+
     try {
         const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook`
         const response = await fetch(url, {
@@ -38,6 +42,12 @@ async function setupWebhook(): Promise<boolean> {
 }
 
 async function notifyStockEvent(productId: string, action: 'IN' | 'OUT'): Promise<boolean> {
+    const supabase = getSupabaseClient()
+    if (!supabase) {
+        console.error('Missing Supabase server env vars')
+        return false
+    }
+
     try {
         // Get product details
         const { data: product, error: productError } = await supabase
@@ -75,11 +85,15 @@ async function notifyStockEvent(productId: string, action: 'IN' | 'OUT'): Promis
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { action } = req.query as Record<string, string>
+    const hasSupabase = !!getSupabaseClient()
 
     switch (action) {
-        case 'setup-webhook':
+        case 'setup-webhook': {
             if (req.method !== 'POST') {
                 return res.status(405).json({ error: 'Method not allowed' })
+            }
+            if (!TELEGRAM_BOT_TOKEN) {
+                return res.status(500).json({ error: 'Missing TELEGRAM_BOT_TOKEN' })
             }
 
             const webhookSuccess = await setupWebhook()
@@ -87,10 +101,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 success: webhookSuccess,
                 webhook_url: WEBHOOK_URL,
             })
+        }
 
-        case 'notify-stock-in':
+        case 'notify-stock-in': {
             if (req.method !== 'POST') {
                 return res.status(405).json({ error: 'Method not allowed' })
+            }
+            if (!TELEGRAM_BOT_TOKEN || !hasSupabase) {
+                return res.status(500).json({ error: 'Missing Telegram or Supabase server configuration' })
             }
 
             const { productId: inProductId } = req.body
@@ -103,10 +121,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 success: inSuccess,
                 message: 'Stock in notification sent',
             })
+        }
 
-        case 'notify-stock-out':
+        case 'notify-stock-out': {
             if (req.method !== 'POST') {
                 return res.status(405).json({ error: 'Method not allowed' })
+            }
+            if (!TELEGRAM_BOT_TOKEN || !hasSupabase) {
+                return res.status(500).json({ error: 'Missing Telegram or Supabase server configuration' })
             }
 
             const { productId: outProductId } = req.body
@@ -119,10 +141,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 success: outSuccess,
                 message: 'Stock out notification sent',
             })
+        }
 
-        case 'notify-new-product':
+        case 'notify-new-product': {
             if (req.method !== 'POST') {
                 return res.status(405).json({ error: 'Method not allowed' })
+            }
+            if (!TELEGRAM_BOT_TOKEN || !hasSupabase) {
+                return res.status(500).json({ error: 'Missing Telegram or Supabase server configuration' })
+            }
+
+            const supabase = getSupabaseClient()
+            if (!supabase) {
+                return res.status(500).json({ error: 'Missing Supabase server configuration' })
             }
 
             const { productId } = req.body
@@ -145,6 +176,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 success: newProductSuccess,
                 message: 'New product notification sent',
             })
+        }
 
         default:
             return res.status(400).json({ error: 'Invalid action' })

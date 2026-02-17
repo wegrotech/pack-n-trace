@@ -23,16 +23,20 @@ interface StockTransaction {
 }
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-if (!TELEGRAM_BOT_TOKEN || !SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
-    throw new Error('Missing required environment variables')
+function getSupabaseClient() {
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) return null
+    return createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 }
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-
 export async function sendTelegramNotification(options: NotificationOptions): Promise<boolean> {
+    if (!TELEGRAM_BOT_TOKEN) {
+        console.error('Missing TELEGRAM_BOT_TOKEN')
+        return false
+    }
+
     try {
         const chatIds = options.chatIds || (options.chatId ? [options.chatId] : [])
 
@@ -89,6 +93,12 @@ export async function notifyStockMovement(
     product: Product,
     transaction: StockTransaction
 ): Promise<boolean> {
+    const supabase = getSupabaseClient()
+    if (!supabase) {
+        console.error('Missing Supabase server env vars')
+        return false
+    }
+
     try {
         const action = transaction.action === 'IN' ? '📦 Stock In' : '📤 Stock Out'
         const emoji = transaction.action === 'IN' ? '⬆️' : '⬇️'
@@ -130,6 +140,12 @@ ${transaction.note ? `<b>Note:</b> ${transaction.note}` : ''}
 }
 
 export async function notifyNewProduct(product: Product): Promise<boolean> {
+    const supabase = getSupabaseClient()
+    if (!supabase) {
+        console.error('Missing Supabase server env vars')
+        return false
+    }
+
     try {
         const message = `
 ✨ <b>New Product Added</b>
@@ -170,6 +186,9 @@ async function logNotification(
     messageId?: number,
     errorMessage?: string
 ) {
+    const supabase = getSupabaseClient()
+    if (!supabase) return
+
     try {
         await supabase.from('telegram_notifications_log').insert({
             chat_id: chatId,
